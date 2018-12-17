@@ -24,12 +24,15 @@ class PianoStairs():
 
   def __init__(self):
     self.NUM_PINS = 26
+    self.MAX_PLAY = 4
+    self.played = 0
 
     # Keep track of the previous values so that we can do smoothing
     self.previnputs = [False] * self.NUM_PINS
 
     if not DEBUG:
-      self.ser = serial.Serial('/dev/ttyACM0', 9600, timeout=1)
+      self.ser = serial.Serial('/dev/ttyACM0', 115200, timeout=1)
+      
     letters = [
       "c0", "d1", "e1", "f1", "g1", "a1", "b1",
       "c1", "d2", "e2", "f2", "g2", "a2", "b2",
@@ -38,17 +41,18 @@ class PianoStairs():
     ]
 
     # remove this line if you plugged the sensors in top-to-bottom ;)
-    letters = letters[::-1]
+    # letters = letters[::-1]
 
-    self.piano_notes = ["samples/"+letter+".wav" for letter in letters]
+    self.piano_notes = ["/home/pi/Documents/piano-stairs/samples/"+letter+".wav" for letter in letters]
 
   def piano(self, i):
     if DEBUG:
-      print "Debug Piano: ", i
+      print("Debug Piano: ", i)
     else:
       # This assumes you're running on a Raspberry Pi with omxplayer installed.
       # Replace with appropriate system call to play a .wav file if not.
-      os.system("omxplayer -o local " + self.piano_notes[i])
+      os.system("omxplayer -o local " + self.piano_notes[i] + " &")
+      # subprocess.call(["omxplayer", "-o", "local", self.piano_notes[i], "&"])
 
   def run(self):
     # Sleep while we wait for everything to boot up.
@@ -61,17 +65,24 @@ class PianoStairs():
         line = raw_input()
       else:
         line = self.ser.readline()
+        
+      # print(line)
 
       # Don't do anything if something weird happened w/ serial communication
-      if len(line) < 8:
+      if len(line) < self.NUM_PINS - 1:
         continue  
 
+      if self.played > self.MAX_PLAY:
+        os.system("sudo killall -s 9 omxplayer.bin")
+        self.played = 0
+      
       for i in range(self.NUM_PINS):
         curr = line[i] != '0'
         prev = self.previnputs[i]
+        self.previnputs[i] = curr
         if curr and not prev:
             self.piano(i)
-        self.previnputs[i] = curr
+            self.played = self.played + 1
 
 if __name__ == "__main__":
     pianoStairs = PianoStairs()

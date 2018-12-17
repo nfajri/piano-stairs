@@ -13,7 +13,7 @@
  * Make sure to adjust analogPins[] and numAnalogPins below
  * if you want to run this on e.g. an Arduino Uno,
  * which has only 6 analog inputs.
- * 
+ *  
  * MODIFIED VERSION
  * ------------------------------------------------------------------
  * 
@@ -22,8 +22,10 @@
 
 #include <Adafruit_NeoPixel.h>
 
-#define SENSOR_LENGTH 26
-#define LED_STRIP_NUM 120
+#define SENSOR_LENGTH       26
+#define SENSOR_TIMEOUT      20000 // microseconds
+#define SENSOR_HISTORY_NUM  10
+#define LED_STRIP_NUM       120
 
 uint8_t sensorPins[] = {
   26, 27, 28, 29, 30, 31, 32, 33, 34, 35,
@@ -37,24 +39,10 @@ uint8_t ledPins[] = {
   20, 21, 22, 23, 24, 25
 };
 
-Adafruit_NeoPixel pixels[SENSOR_LENGTH];
-
+Adafruit_NeoPixel leds[SENSOR_LENGTH];
 long thresholds[SENSOR_LENGTH];
-
-// This value can be tuned depending on sensor installation.
-// It will likely vary based on: ambient light conditions;
-// positioning of the sensors; resistor values used; etc.
-long absoluteThresh = 20;
-
-// Keep track of the last N x H sensor readings,
-// where N = number of inputs
-// and H = history length.
-// This allows us to do smoothing.
-long sensorHistory[SENSOR_LENGTH][10];
-
-// This is used to cycle through the sensorHistory array
-// along the H dimension.
-uint8_t bufferIndex = 0;
+long sensorHistory[SENSOR_LENGTH][SENSOR_HISTORY_NUM];
+uint8_t historyIndex;
 
 void setup() {
   Serial.begin(115200);
@@ -62,85 +50,105 @@ void setup() {
   // IO initializaions
   for (uint8_t i = 0; i < SENSOR_LENGTH; i++) {
     pinMode(sensorPins[i], OUTPUT);
-
-    pixels[i] = Adafruit_NeoPixel(LED_STRIP_NUM, ledPins[i], NEO_GRB + NEO_KHZ400);
-    pixels[i].begin(); // This initializes the NeoPixel library.
+    
+    leds[i] = Adafruit_NeoPixel(LED_STRIP_NUM, ledPins[i], NEO_GRB + NEO_KHZ400);
+    leds[i].begin(); // This initializes the NeoPixel library.
   }
 
-  // Test LED
+  calibrate();
+}
+
+void loop() {  
+  // testLed();
+  testSensor();
+}
+
+void testLed() {
   for (uint8_t i = 0; i < SENSOR_LENGTH; i++) {
     ledOn(i);
   }
+  delay(1000);
   
-  // calibrate();
+  for (uint8_t i = 0; i < SENSOR_LENGTH; i++) {
+    ledOff(i);
+  }
+  delay(1000);
 }
 
-void loop() {
-  
-
-  /*
+void testSensor() {
   for (int i = 0; i < SENSOR_LENGTH; i++) {
     long val = sensorRead(sensorPins[i]);
+
     long oldAvg = 0;
     
-    for (uint8_t j = 0; j < 10; j++) {
+    for (uint8_t j = 0; j < SENSOR_HISTORY_NUM; j++) {
       oldAvg += sensorHistory[i][j];
     }
-    oldAvg = oldAvg / 10;
     
-    if (val > oldAvg + absoluteThresh) {
+    oldAvg = oldAvg / SENSOR_HISTORY_NUM;
+
+    if (val > 0 && val < thresholds[i]) {
       Serial.print("1");
-      digitalWrite(ledPins[i], HIGH);
+      ledOn(i);
     } else {
       Serial.print("0");
-      digitalWrite(ledPins[i], LOW);
+      ledOff(i);
     }
-    
-    sensorHistory[i][bufferIndex] = val;
+//    Serial.print(oldAvg);
+//    Serial.print(", "); 
+
+    sensorHistory[i][historyIndex] = val;
   }
-  
-  bufferIndex = (bufferIndex + 1) % 10;
   Serial.println();
-  delay(5);
-  */
-}
 
-void ledOn(uint8_t pixel) {
-  for (uint8_t i = 0; i < LED_STRIP_NUM; i++) {
-    pixels[pixel].setPixelColor(i, pixels[pixel].Color(0,150,0)); // Moderately bright green color.
-    pixels[pixel].show(); // This sends the updated pixel color to the hardware.
-  }
-}
-
-void ledOff(uint8_t pixel) {
-  for (uint8_t i = 0; i < LED_STRIP_NUM; i++) {
-    pixels[pixel].setPixelColor(i, pixels[pixel].Color(0,0,0)); // Moderately bright green color.
-    pixels[pixel].show(); // This sends the updated pixel color to the hardware.
-  }
+  historyIndex = (historyIndex + 1) % SENSOR_HISTORY_NUM;
+  // delay(5);
 }
 
 void calibrate() {
   // How many steps' worth of data we use for calibration purposes
-  int maxSteps = 10;
+  uint8_t maxSteps = 30;
 
   // Begin by accumulating several steps' worth of baseline data
-  for (int curStep = 0; curStep < maxSteps; curStep++) {
-    for (int pin = 0; pin < SENSOR_LENGTH; pin++) {
+  for (uint8_t curStep = 0; curStep < maxSteps; curStep++) {
+    for (uint8_t pin = 0; pin < SENSOR_LENGTH; pin++) {
        thresholds[pin] += sensorRead(sensorPins[pin]);
     }
   }
 
   // Average out the baseline readings based on how many input readings we did
-  for (int pin = 0; pin < SENSOR_LENGTH; pin++) {
+  for (uint8_t pin = 0; pin < SENSOR_LENGTH; pin++) {
     thresholds[pin] = thresholds[pin] / maxSteps;
   }
   
   // Fill the entire sensorHistory array with baseline data
-  for (int i = 0; i < 6; i++) {
-    for (int j = 0; j < 10; j++) {
+  for (uint8_t i = 0; i < SENSOR_LENGTH; i++) {
+    for (uint8_t j = 0; j < SENSOR_HISTORY_NUM; j++) {
        sensorHistory[i][j] = thresholds[i];
     }
-  } 
+  }
+
+  Serial.println("Tresholds:");
+  for (uint8_t i = 0; i < SENSOR_LENGTH; i++) {
+    thresholds[i] = thresholds[i] - (thresholds[i] / 5);
+    Serial.print(thresholds[i]);
+    Serial.print(", ");
+  }
+  Serial.println();
+}
+
+void ledOn(uint8_t led) {
+  for (uint8_t i = 0; i < LED_STRIP_NUM; i++) {
+    leds[led].setPixelColor(i, leds[led].Color(200,200,200)); 
+  }
+  leds[led].show(); // This sends the updated pixel color to the hardware.
+}
+
+void ledOff(uint8_t led) {
+  for (uint8_t i = 0; i < LED_STRIP_NUM; i++) {
+    leds[led].setPixelColor(i, leds[led].Color(0,0,0));
+  }
+  leds[led].show(); // This sends the updated pixel color to the hardware.
 }
 
 long sensorRead(uint8_t pin) {
@@ -157,5 +165,5 @@ long sensorRead(uint8_t pin) {
   // whose duration is the time (in microseconds) from the sending of the ping
   // to the reception of its echo off of an object.
   pinMode(pin, INPUT);
-  return pulseIn(pin, HIGH);  
+  return pulseIn(pin, HIGH, SENSOR_TIMEOUT);  
 }
