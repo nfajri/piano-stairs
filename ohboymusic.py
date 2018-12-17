@@ -23,14 +23,19 @@ DEBUG = False
 class PianoStairs():
 
   def __init__(self):
-    self.NUM_PINS = 8
+    self.NUM_PINS = 26
 
     # Keep track of the previous values so that we can do smoothing
     self.previnputs = [False] * self.NUM_PINS
 
     if not DEBUG:
       self.ser = serial.Serial('/dev/ttyACM0', 9600, timeout=1)
-    letters = ["c1", "d", "e", "f", "g", "a", "b", "c"]
+    letters = [
+      "c0", "d1", "e1", "f1", "g1", "a1", "b1",
+      "c1", "d2", "e2", "f2", "g2", "a2", "b2",
+      "c2", "d3", "e3", "f3", "g3", "a3", "b3",
+      "c3", "d4", "e4", "f4", "g4", "a4", "b4",
+    ]
 
     # remove this line if you plugged the sensors in top-to-bottom ;)
     letters = letters[::-1]
@@ -59,7 +64,7 @@ class PianoStairs():
 
       # Don't do anything if something weird happened w/ serial communication
       if len(line) < 8:
-        continue
+        continue  
 
       for i in range(self.NUM_PINS):
         curr = line[i] != '0'
