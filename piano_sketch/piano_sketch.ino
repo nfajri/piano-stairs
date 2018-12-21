@@ -22,15 +22,21 @@
 
 #include <Adafruit_NeoPixel.h>
 
-#define SENSOR_LENGTH       26
-#define SENSOR_TIMEOUT      20000 // microseconds
+#define SENSOR_LENGTH       25
+#define SENSOR_TIMEOUT      17000 // microseconds
 #define SENSOR_HISTORY_NUM  10
 #define LED_STRIP_NUM       120
 
+//uint8_t sensorPins[] = {
+//  26, 27, 28, 29, 30, 31, 32, 33, 34, 35,
+//  36, 37, 38, 39, 40, 41, 42, 43, 44, 45,
+//  46, 47, 48, 49, 50, 51
+//};
+
 uint8_t sensorPins[] = {
-  26, 27, 28, 29, 30, 31, 32, 33, 34, 35,
-  36, 37, 38, 39, 40, 41, 42, 43, 44, 45,
-  46, 47, 48, 49, 50, 51
+  26, 27, 28, 29, 30, 31, 32, 33, 34, 36,
+  35, 37, 38, 39, 40, 41, 42, 43, 44, 45,
+  47, 48, 46, 49, 50, 51
 };
  
 uint8_t ledPins[] = {
@@ -40,6 +46,7 @@ uint8_t ledPins[] = {
 };
 
 Adafruit_NeoPixel leds[SENSOR_LENGTH];
+uint8_t prevVals[SENSOR_LENGTH];
 long thresholds[SENSOR_LENGTH];
 long sensorHistory[SENSOR_LENGTH][SENSOR_HISTORY_NUM];
 uint8_t historyIndex;
@@ -56,7 +63,7 @@ void setup() {
   }
 
   calibrate();
-  randomSeed(analogRead(A0));
+  randomSeed(234);
 }
 
 void loop() {  
@@ -76,34 +83,23 @@ void testLed() {
   delay(1000);
 }
 
-void testSensor() {
+void testSensor() {  
   for (int i = 0; i < SENSOR_LENGTH; i++) {
     long val = sensorRead(sensorPins[i]);
 
-    long oldAvg = 0;
-    
-    for (uint8_t j = 0; j < SENSOR_HISTORY_NUM; j++) {
-      oldAvg += sensorHistory[i][j];
-    }
-    
-    oldAvg = oldAvg / SENSOR_HISTORY_NUM;
-
-    if (val > 0 && val < thresholds[i]) {
-      Serial.print("1");
-      ledOn(i);
+    if (val > 30 && val < thresholds[i]) {
+      if (prevVals[i] != 1) {
+        prevVals[i] = 1;
+        ledOn(i);
+        Serial.println(i);
+      }
     } else {
-      Serial.print("0");
-      ledOff(i);
+      if (prevVals[i] != 0) {
+        prevVals[i] = 0;
+        ledOff(i);
+      }
     }
-//    Serial.print(oldAvg);
-//    Serial.print(", "); 
-
-    sensorHistory[i][historyIndex] = val;
   }
-  Serial.println();
-
-  historyIndex = (historyIndex + 1) % SENSOR_HISTORY_NUM;
-  // delay(5);
 }
 
 void calibrate() {
@@ -129,27 +125,20 @@ void calibrate() {
     }
   }
 
-  Serial.println("Tresholds:");
   for (uint8_t i = 0; i < SENSOR_LENGTH; i++) {
     thresholds[i] = thresholds[i] - (thresholds[i] / 5);
-    Serial.print(thresholds[i]);
-    Serial.print(", ");
   }
-  Serial.println();
 }
 
 void ledOn(uint8_t led) {
-  int r, g, b, limit;
+  int r, g, b, limit;  
+  r = random(0, 250);
+  g = random(0, 250);
+  b = random(0, 250);
   
-  while (r < 5 && g < 5 && b < 5) {
-	  r = random(0, 10);
-	  g = random(0, 10);
-	  b = random(0, 10);
-  }
-  
-  r = r > 5 ? 250 : 0;
-  g = g > 5 ? 250 : 0;
-  b = b > 5 ? 250 : 0;
+//  r = r > 5 ? 250 : 0;
+//  g = g > 5 ? 250 : 0;
+//  b = b > 5 ? 250 : 0;
   
   for (uint8_t i = 0; i < LED_STRIP_NUM; i++) {
     leds[led].setPixelColor(i, leds[led].Color(r, g, b)); 
