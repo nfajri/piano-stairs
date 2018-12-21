@@ -56,6 +56,7 @@ void setup() {
   }
 
   calibrate();
+  randomSeed(analogRead(A0));
 }
 
 void loop() {  
@@ -138,8 +139,20 @@ void calibrate() {
 }
 
 void ledOn(uint8_t led) {
+  int r, g, b, limit;
+  
+  while (r < 5 && g < 5 && b < 5) {
+	  r = random(0, 10);
+	  g = random(0, 10);
+	  b = random(0, 10);
+  }
+  
+  r = r > 5 ? 250 : 0;
+  g = g > 5 ? 250 : 0;
+  b = b > 5 ? 250 : 0;
+  
   for (uint8_t i = 0; i < LED_STRIP_NUM; i++) {
-    leds[led].setPixelColor(i, leds[led].Color(200,200,200)); 
+    leds[led].setPixelColor(i, leds[led].Color(r, g, b)); 
   }
   leds[led].show(); // This sends the updated pixel color to the hardware.
 }
