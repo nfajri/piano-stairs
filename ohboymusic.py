@@ -66,23 +66,12 @@ class PianoStairs():
       else:
         line = self.ser.readline()
         
-      # print(line)
+      try:
+        self.piano(int(line))
+      except ValueError:
+        pass
 
-      # Don't do anything if something weird happened w/ serial communication
-      if len(line) < self.NUM_PINS - 1:
-        continue  
-
-      if self.played > self.MAX_PLAY:
-        os.system("sudo killall -s 9 omxplayer.bin")
-        self.played = 0
-      
-      for i in range(self.NUM_PINS):
-        curr = line[i] != '0'
-        prev = self.previnputs[i]
-        self.previnputs[i] = curr
-        if curr and not prev:
-            self.piano(i)
-            self.played = self.played + 1
+      continue
 
 if __name__ == "__main__":
     pianoStairs = PianoStairs()
