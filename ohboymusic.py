@@ -17,6 +17,7 @@ the appropriate sample files.
 import serial
 import time
 import os
+import pygame.mixer
 
 DEBUG = False
 
@@ -44,15 +45,14 @@ class PianoStairs():
     # letters = letters[::-1]
 
     self.piano_notes = ["/home/pi/Documents/piano-stairs/samples/"+letter+".wav" for letter in letters]
+    # self.piano_notes = ["C:\\Users\\Modegi\\Documents\\ovio\\piano-stairs\\samples\\"+letter+".wav" for letter in letters]
+    
+    pygame.mixer.init(44000, -16, 1, 1024) 
+    self.sounds = [pygame.mixer.Sound(note) for note in self.piano_notes]
+    self.channels = [pygame.mixer.Channel(i) for i in range(7)]
 
   def piano(self, i):
-    if DEBUG:
-      print("Debug Piano: ", i)
-    else:
-      # This assumes you're running on a Raspberry Pi with omxplayer installed.
-      # Replace with appropriate system call to play a .wav file if not.
-      os.system("omxplayer -o local " + self.piano_notes[i] + " &")
-      # subprocess.call(["omxplayer", "-o", "local", self.piano_notes[i], "&"])
+    self.channels[i%7].play(self.sounds[i])
 
   def run(self):
     # Sleep while we wait for everything to boot up.
@@ -74,6 +74,6 @@ class PianoStairs():
       continue
 
 if __name__ == "__main__":
-    pianoStairs = PianoStairs()
-    pianoStairs.run()
+  pianoStairs = PianoStairs()
+  pianoStairs.run()
 

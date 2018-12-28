@@ -23,26 +23,26 @@
 #include <Adafruit_NeoPixel.h>
 
 #define SENSOR_LENGTH       25
-#define SENSOR_TIMEOUT      17000 // microseconds
+#define SENSOR_TIMEOUT      38000 // microseconds
 #define SENSOR_HISTORY_NUM  10
 #define LED_STRIP_NUM       120
 
-//uint8_t sensorPins[] = {
-//  26, 27, 28, 29, 30, 31, 32, 33, 34, 35,
-//  36, 37, 38, 39, 40, 41, 42, 43, 44, 45,
-//  46, 47, 48, 49, 50, 51
-//};
-
 uint8_t sensorPins[] = {
-  26, 27, 28, 29, 30, 31, 32, 33, 34, 36,
-  35, 37, 38, 39, 40, 41, 42, 43, 44, 45,
-  47, 48, 46, 49, 50, 51
+  26, 27, 28, 29, 30, 31, 32, 33, 34, 35,
+  36, 37, 38, 39, 40, 41, 42, 43, 44, 45,
+  46, 47, 48, 49, 50
 };
  
+//uint8_t ledPins[] = {
+//  51, 52,  2,  3,  4,  5,  6,  7,  8,  9,
+//  10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
+//  20, 21, 22, 23, 24, 25
+//};
+
 uint8_t ledPins[] = {
   51, 52,  2,  3,  4,  5,  6,  7,  8,  9,
   10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
-  20, 21, 22, 23, 24, 25
+  20, 21, 22, 23, 24
 };
 
 Adafruit_NeoPixel leds[SENSOR_LENGTH];
@@ -64,6 +64,15 @@ void setup() {
 
   calibrate();
   randomSeed(234);
+
+  for (uint8_t i = 0; i < SENSOR_LENGTH; i++) {
+    ledOn(i);
+  }
+
+  delay(500);
+  for (uint8_t i = 0; i < SENSOR_LENGTH; i++) {
+    ledOff(i);
+  }
 }
 
 void loop() {  
